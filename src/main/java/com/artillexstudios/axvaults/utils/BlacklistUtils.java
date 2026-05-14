@@ -3,7 +3,10 @@ package com.artillexstudios.axvaults.utils;
 import com.artillexstudios.axapi.items.WrappedItemStack;
 import com.artillexstudios.axapi.libs.boostedyaml.block.implementation.Section;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -15,6 +18,7 @@ public class BlacklistUtils {
 
     public static boolean isBlacklisted(@Nullable ItemStack it) {
         if (it == null || it.getType() == Material.AIR) return false;
+        if (isExemptByPdc(it)) return false;
         if (checkLegacy(it)) return true;
         try {
             List<Map<String, Object>> list = CONFIG.getMapList("blacklist-items");
@@ -27,6 +31,20 @@ public class BlacklistUtils {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
+        }
+        return false;
+    }
+
+    private static boolean isExemptByPdc(ItemStack it) {
+        if (it.getItemMeta() == null) return false;
+        List<String> exemptKeys = CONFIG.getStringList("blacklist-pdc-exempt");
+        if (exemptKeys == null || exemptKeys.isEmpty()) return false;
+        PersistentDataContainer pdc = it.getItemMeta().getPersistentDataContainer();
+        for (String raw : exemptKeys) {
+            String[] parts = raw.split(":", 2);
+            if (parts.length != 2) continue;
+            NamespacedKey key = new NamespacedKey(parts[0], parts[1]);
+            if (pdc.has(key, PersistentDataType.STRING)) return true;
         }
         return false;
     }

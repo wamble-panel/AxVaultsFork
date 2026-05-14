@@ -65,6 +65,12 @@ delete-empty-vaults: true
 # we suggest creating a spark report and sending it to the developers before using this
 async-item-serializer: false
 
+# Items whose PersistentDataContainer contains any of these keys are EXEMPT from the blacklist.
+# This allows voucher/event items (e.g. CrazyVouchers) to bypass material-based restrictions.
+# Format: "namespace:key"
+blacklist-pdc-exempt:
+  - "crazyvouchers:crazyvouchers_voucher_item"
+
 # list of items that CAN'T be put into vaults
 #
 # supported regex: (optional)
@@ -78,12 +84,135 @@ async-item-serializer: false
 #  > material / type
 #  > custom-model-data (only the old variant)
 blacklist-items:
-  - custom-model-data: 100
-    material: BARRIER
-    name: "*Some custom item*"
-  - custom-model-data: 150
-    material: BARRIER
-    name: "*Another custom item*"
+  # --- Ores & raw materials ---
+  - material: "*_ORE"
+  - material: "ANCIENT_DEBRIS"
+  - material: "RAW_IRON"
+  - material: "RAW_GOLD"
+  - material: "RAW_COPPER"
+  - material: "COAL"
+  - material: "LAPIS_LAZULI"
+  - material: "DIAMOND"
+  - material: "EMERALD"
+  - material: "NETHERITE_SCRAP"
+  - material: "NETHERITE_INGOT"
+  # --- Blocks ---
+  - material: "NETHERITE_BLOCK"
+  - material: "DIAMOND_BLOCK"
+  - material: "IRON_BLOCK"
+  - material: "GOLD_BLOCK"
+  - material: "EMERALD_BLOCK"
+  - material: "LAPIS_BLOCK"
+  - material: "REDSTONE_BLOCK"
+  - material: "BEACON"
+  - material: "*_OBSIDIAN"
+  - material: "*_PURPUR*"
+  - material: "*_PRISMARINE*"
+  - material: "*_COPPER*"
+  - material: "LODESTONE"
+  - material: "GILDED_BLACKSTONE"
+  - material: "RESPAWN_ANCHOR"
+  # --- Nether blocks ---
+  - material: "*_NYLIUM"
+  - material: "NETHER_WART_BLOCK"
+  - material: "WARPED_WART_BLOCK"
+  - material: "BONE_BLOCK"
+  - material: "MAGMA_BLOCK"
+  - material: "GLOWSTONE"
+  - material: "NETHER_BRICK_FENCE"
+  - material: "NETHER_SPROUTS"
+  - material: "WARPED_ROOTS"
+  - material: "CRIMSON_ROOTS"
+  - material: "WARPED_FUNGUS"
+  - material: "CRIMSON_FUNGUS"
+  - material: "WARPED_STEM"
+  - material: "CRIMSON_STEM"
+  - material: "STRIPPED_WARPED_STEM"
+  - material: "STRIPPED_CRIMSON_STEM"
+  - material: "WARPED_HYPHAE"
+  - material: "CRIMSON_HYPHAE"
+  - material: "STRIPPED_WARPED_HYPHAE"
+  - material: "STRIPPED_CRIMSON_HYPHAE"
+  - material: "NETHER_QUARTZ_ORE"
+  - material: "NETHER_GOLD_ORE"
+  # --- Infested blocks ---
+  - material: "INFESTED_STONE"
+  - material: "INFESTED_COBBLESTONE"
+  - material: "INFESTED_STONE_BRICKS"
+  - material: "INFESTED_MOSSY_STONE_BRICKS"
+  - material: "INFESTED_CRACKED_STONE_BRICKS"
+  - material: "INFESTED_CHISELED_STONE_BRICKS"
+  # --- Quartz ---
+  - material: "NETHER_QUARTZ_ORE"
+  - material: "QUARTZ_BLOCK"
+  - material: "QUARTZ_BRICKS"
+  - material: "SMOOTH_QUARTZ"
+  - material: "CHISELED_QUARTZ_BLOCK"
+  - material: "QUARTZ_PILLAR"
+  - material: "QUARTZ_SLAB"
+  - material: "QUARTZ_STAIRS"
+  # --- Valuables / combat ---
+  - material: "NETHER_STAR"
+  - material: "TRIDENT"
+  - material: "SHULKER_SHELL"
+  - material: "TOTEM_OF_UNDYING"
+  - material: "GOLDEN_APPLE"
+  - material: "ENCHANTED_GOLDEN_APPLE"
+  - material: "ENCHANTED_BOOK"
+  - material: "BOW"
+  - material: "CROSSBOW"
+  - material: "SADDLE"
+  # --- Redstone / utility ---
+  - material: "TNT"
+  - material: "RAIL"
+  - material: "POWERED_RAIL"
+  - material: "DETECTOR_RAIL"
+  - material: "ACTIVATOR_RAIL"
+  - material: "REDSTONE"
+  - material: "TRIPWIRE_HOOK"
+  - material: "DAYLIGHT_DETECTOR"
+  - material: "REDSTONE_LAMP"
+  - material: "OBSERVER"
+  - material: "PISTON"
+  - material: "STICKY_PISTON"
+  - material: "COMPARATOR"
+  - material: "REPEATER"
+  - material: "HOPPER"
+  - material: "LEVER"
+  - material: "TARGET"
+  - material: "LIGHTNING_ROD"
+  - material: "DISPENSER"
+  - material: "DROPPER"
+  # --- Workstations ---
+  - material: "ANVIL"
+  - material: "CHIPPED_ANVIL"
+  - material: "DAMAGED_ANVIL"
+  - material: "CRAFTING_TABLE"
+  - material: "FURNACE"
+  - material: "BLAST_FURNACE"
+  - material: "SMOKER"
+  - material: "ENCHANTING_TABLE"
+  - material: "BREWING_STAND"
+  - material: "CAULDRON"
+  - material: "LOOM"
+  - material: "CARTOGRAPHY_TABLE"
+  - material: "FLETCHING_TABLE"
+  - material: "GRINDSTONE"
+  - material: "STONECUTTER"
+  - material: "NOTE_BLOCK"
+  - material: "JUKEBOX"
+  - material: "BARREL"
+  - material: "LECTERN"
+  # --- Tools ---
+  - material: "FISHING_ROD"
+  - material: "FLINT_AND_STEEL"
+  - material: "SHEARS"
+  # --- Admin/structure blocks ---
+  - material: "COMMAND_BLOCK"
+  - material: "CHAIN_COMMAND_BLOCK"
+  - material: "REPEATING_COMMAND_BLOCK"
+  - material: "STRUCTURE_BLOCK"
+  - material: "JIGSAW"
 
 # you must define at least 1
 # requires a restart to update
