@@ -65,6 +65,9 @@ delete-empty-vaults: true
 # we suggest creating a spark report and sending it to the developers before using this
 async-item-serializer: false
 
+# If true, any item that has lore lines set (e.g. CrazyVouchers, event items) bypasses the blacklist entirely.
+blacklist-exempt-if-has-lore: true
+
 # Items whose PersistentDataContainer contains any of these keys are EXEMPT from the blacklist.
 # This allows voucher/event items (e.g. CrazyVouchers) to bypass material-based restrictions.
 # Format: "namespace:key"

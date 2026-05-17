@@ -19,6 +19,7 @@ public class BlacklistUtils {
     public static boolean isBlacklisted(@Nullable ItemStack it) {
         if (it == null || it.getType() == Material.AIR) return false;
         if (isExemptByPdc(it)) return false;
+        if (isExemptByLore(it)) return false;
         if (checkLegacy(it)) return true;
         try {
             List<Map<String, Object>> list = CONFIG.getMapList("blacklist-items");
@@ -33,6 +34,13 @@ public class BlacklistUtils {
             ex.printStackTrace();
         }
         return false;
+    }
+
+    private static boolean isExemptByLore(ItemStack it) {
+        if (!CONFIG.getBoolean("blacklist-exempt-if-has-lore", false)) return false;
+        if (it.getItemMeta() == null) return false;
+        List<String> lore = it.getItemMeta().getLore();
+        return lore != null && !lore.isEmpty();
     }
 
     private static boolean isExemptByPdc(ItemStack it) {
