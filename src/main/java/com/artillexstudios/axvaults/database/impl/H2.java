@@ -5,6 +5,7 @@ import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.database.Database;
 import com.artillexstudios.axvaults.placed.PlacedVaults;
+import com.artillexstudios.axvaults.utils.SerializationUtils;
 import com.artillexstudios.axvaults.utils.ThreadUtils;
 import com.artillexstudios.axvaults.vaults.Vault;
 import com.artillexstudios.axvaults.vaults.VaultPlayer;
@@ -13,6 +14,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.h2.jdbc.JdbcConnection;
+
+import java.io.ByteArrayInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -130,17 +133,29 @@ public class H2 implements Database {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     int id = rs.getInt(1);
+                    byte[] bytes = rs.getBytes(3);
                     ItemStack[] items;
+                    boolean legacy = false;
                     try {
-                        items = Serializers.ITEM_ARRAY.deserialize(rs.getBytes(3));
+                        items = Serializers.ITEM_ARRAY.deserialize(bytes);
                     } catch (Exception ex) {
-                        ex.printStackTrace();
-                        Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FF0000[AxVaults] Failed to load vault #%s of %s!".formatted(id, vaultPlayer.getUUID().toString())));
-                        continue;
+                        // fallback: data was saved with BukkitObjectOutputStream (pre-2.0.0 format)
+                        items = SerializationUtils.invFromBits(new ByteArrayInputStream(bytes));
+                        if (items == null) {
+                            ex.printStackTrace();
+                            Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FF0000[AxVaults] Failed to load vault #%s of %s!".formatted(id, vaultPlayer.getUUID().toString())));
+                            continue;
+                        }
+                        legacy = true;
+                        Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FFAA00[AxVaults] Migrated legacy vault #%s of %s to new format.".formatted(id, vaultPlayer.getUUID().toString())));
                     }
 //                    if (VaultUtils.isDeleteEmptyVaults() && items.length == 0) continue;
                     Material icon = rs.getString(4) == null ? null : Material.valueOf(rs.getString(4));
-                    ThreadUtils.runSync(() -> new Vault(vaultPlayer, id, icon, items));
+                    final boolean needsMigration = legacy;
+                    ThreadUtils.runSync(() -> {
+                        Vault vault = new Vault(vaultPlayer, id, icon, items);
+                        if (needsMigration) vault.hasChanged().set(true);
+                    });
                 }
             }
         } catch (SQLException ex) {
