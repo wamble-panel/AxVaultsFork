@@ -4,7 +4,12 @@ import com.artillexstudios.axapi.items.WrappedItemStack;
 import com.artillexstudios.axapi.libs.boostedyaml.block.implementation.Section;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.inventory.meta.BundleMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
@@ -16,23 +21,62 @@ import static com.artillexstudios.axvaults.AxVaults.CONFIG;
 
 public class BlacklistUtils {
 
+    private static final int MAX_CONTAINER_DEPTH = 3;
+
     public static boolean isBlacklisted(@Nullable ItemStack it) {
+        return isBlacklisted(it, 0);
+    }
+
+    private static boolean isBlacklisted(@Nullable ItemStack it, int depth) {
         if (it == null || it.getType() == Material.AIR) return false;
-        if (isExemptByPdc(it)) return false;
-        if (isExemptByLore(it)) return false;
-        if (checkLegacy(it)) return true;
-        try {
-            List<Map<String, Object>> list = CONFIG.getMapList("blacklist-items");
-            if (list == null || list.isEmpty()) return false;
-            WrappedItemStack wrap = WrappedItemStack.wrap(it);
-            for (Map<String, Object> map : list) {
-                ItemMatcher matcher = new ItemMatcher(wrap, map);
-                boolean result = matcher.isMatching();
-                if (result) return true;
+        if (depth > MAX_CONTAINER_DEPTH) return false;
+
+        boolean exempt = isExemptByPdc(it) || isExemptByLore(it);
+
+        if (!exempt) {
+            if (checkLegacy(it)) return true;
+            try {
+                List<Map<String, Object>> list = CONFIG.getMapList("blacklist-items");
+                if (list != null && !list.isEmpty()) {
+                    WrappedItemStack wrap = WrappedItemStack.wrap(it);
+                    for (Map<String, Object> map : list) {
+                        ItemMatcher matcher = new ItemMatcher(wrap, map);
+                        if (matcher.isMatching()) return true;
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
         }
+
+        // Check container contents regardless of exemption — prevents using an
+        // exempt wrapper (e.g. a "voucher" shulker) to smuggle blacklisted items in.
+        if (CONFIG.getBoolean("blacklist-check-containers", true) && containsBlacklisted(it, depth)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static boolean containsBlacklisted(ItemStack it, int depth) {
+        ItemMeta meta = it.getItemMeta();
+        if (meta == null) return false;
+
+        if (meta instanceof BlockStateMeta bsm && bsm.hasBlockState()) {
+            BlockState state = bsm.getBlockState();
+            if (state instanceof ShulkerBox shulker) {
+                for (ItemStack content : shulker.getInventory().getContents()) {
+                    if (isBlacklisted(content, depth + 1)) return true;
+                }
+            }
+        }
+
+        if (meta instanceof BundleMeta bm) {
+            for (ItemStack content : bm.getItems()) {
+                if (isBlacklisted(content, depth + 1)) return true;
+            }
+        }
+
         return false;
     }
 

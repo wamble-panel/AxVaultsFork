@@ -72,6 +72,10 @@ blacklist-exempt-if-has-lore: true
 # Set to false to lock blacklisted items inside — players cannot remove them either.
 blacklist-allow-taking-out: true
 
+# If true, the contents of shulker boxes and bundles are checked against the blacklist.
+# Prevents players from smuggling banned items into the vault hidden inside a container.
+blacklist-check-containers: true
+
 # Items whose PersistentDataContainer contains any of these keys are EXEMPT from the blacklist.
 # This allows voucher/event items (e.g. CrazyVouchers) to bypass material-based restrictions.
 # Format: "namespace:key"
