@@ -68,6 +68,10 @@ async-item-serializer: false
 # If true, any item that has lore lines set (e.g. CrazyVouchers, event items) bypasses the blacklist entirely.
 blacklist-exempt-if-has-lore: true
 
+# If true, players can take blacklisted items OUT of their vault (they just can't put new ones in).
+# Set to false to lock blacklisted items inside — players cannot remove them either.
+blacklist-allow-taking-out: true
+
 # Items whose PersistentDataContainer contains any of these keys are EXEMPT from the blacklist.
 # This allows voucher/event items (e.g. CrazyVouchers) to bypass material-based restrictions.
 # Format: "namespace:key"
