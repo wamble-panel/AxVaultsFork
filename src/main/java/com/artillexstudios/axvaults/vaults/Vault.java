@@ -4,6 +4,7 @@ import com.artillexstudios.axapi.utils.ContainerUtils;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.hooks.HookManager;
+import com.artillexstudios.axvaults.utils.BlacklistUtils;
 import com.artillexstudios.axvaults.utils.SoundUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -19,10 +20,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.artillexstudios.axvaults.AxVaults.MESSAGES;
+import static com.artillexstudios.axvaults.AxVaults.MESSAGEUTILS;
 
 public class Vault implements InventoryHolder {
     private final VaultPlayer vaultPlayer;
@@ -128,6 +131,17 @@ public class Vault implements InventoryHolder {
         player.openInventory(storage);
         SoundUtils.playSound(player, MESSAGES.getString("sounds.open"));
         lastOpen = System.currentTimeMillis();
+        notifyIfBlacklisted(player);
+    }
+
+    private void notifyIfBlacklisted(@NotNull Player player) {
+        int count = 0;
+        for (ItemStack content : storage.getContents()) {
+            if (BlacklistUtils.isBlacklisted(content)) count++;
+        }
+        if (count > 0) {
+            MESSAGEUTILS.sendLang(player, "blacklisted-items-in-vault", Map.of("%count%", String.valueOf(count)));
+        }
     }
 
     private void dropOverFlow(@NotNull Player player) {
