@@ -132,16 +132,16 @@ public class H2 implements Database {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    int id = rs.getInt(1);
+                    final int id = rs.getInt(1);
                     byte[] bytes = rs.getBytes(3);
-                    ItemStack[] items;
+                    ItemStack[] tempItems = null;
                     boolean legacy = false;
                     try {
-                        items = Serializers.ITEM_ARRAY.deserialize(bytes);
+                        tempItems = Serializers.ITEM_ARRAY.deserialize(bytes);
                     } catch (Exception ex) {
                         // fallback: data was saved with BukkitObjectOutputStream (pre-2.0.0 format)
-                        items = SerializationUtils.invFromBits(new ByteArrayInputStream(bytes));
-                        if (items == null) {
+                        tempItems = SerializationUtils.invFromBits(new ByteArrayInputStream(bytes));
+                        if (tempItems == null) {
                             ex.printStackTrace();
                             Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FF0000[AxVaults] Failed to load vault #%s of %s!".formatted(id, vaultPlayer.getUUID().toString())));
                             continue;
@@ -150,7 +150,8 @@ public class H2 implements Database {
                         Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FFAA00[AxVaults] Migrated legacy vault #%s of %s to new format.".formatted(id, vaultPlayer.getUUID().toString())));
                     }
 //                    if (VaultUtils.isDeleteEmptyVaults() && items.length == 0) continue;
-                    Material icon = rs.getString(4) == null ? null : Material.valueOf(rs.getString(4));
+                    final ItemStack[] items = tempItems;
+                    final Material icon = rs.getString(4) == null ? null : Material.valueOf(rs.getString(4));
                     final boolean needsMigration = legacy;
                     ThreadUtils.runSync(() -> {
                         Vault vault = new Vault(vaultPlayer, id, icon, items);
