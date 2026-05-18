@@ -76,6 +76,13 @@ blacklist-allow-taking-out: true
 # Prevents players from smuggling banned items into the vault hidden inside a container.
 blacklist-check-containers: true
 
+# Vault rollback — keeps snapshots of vault contents before any save/deletion.
+# Admins can restore using: /axvaultadmin rollback <player> <vault> [index]
+vault-rollback:
+  enabled: true
+  # how many snapshots to keep per vault (oldest are discarded first)
+  max-backups-per-vault: 5
+
 # Items whose PersistentDataContainer contains any of these keys are EXEMPT from the blacklist.
 # This allows voucher/event items (e.g. CrazyVouchers) to bypass material-based restrictions.
 # Format: "namespace:key"

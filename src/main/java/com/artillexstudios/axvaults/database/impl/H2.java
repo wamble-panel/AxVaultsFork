@@ -4,6 +4,7 @@ import com.artillexstudios.axapi.serializers.Serializers;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.database.Database;
+import com.artillexstudios.axvaults.database.VaultBackup;
 import com.artillexstudios.axvaults.placed.PlacedVaults;
 import com.artillexstudios.axvaults.utils.SerializationUtils;
 import com.artillexstudios.axvaults.utils.ThreadUtils;
@@ -22,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -70,12 +73,72 @@ public class H2 implements Database {
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+
+        String CREATE_BACKUPS_TABLE = """
+            CREATE TABLE IF NOT EXISTS `axvaults_backups` (
+              `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+              `vault_id` INT NOT NULL,
+              `uuid` VARCHAR(36) NOT NULL,
+              `storage` LONGBLOB,
+              `icon` VARCHAR(128),
+              `backed_up_at` BIGINT NOT NULL
+            );
+""";
+        try (PreparedStatement stmt = conn.prepareStatement(CREATE_BACKUPS_TABLE)) {
+            stmt.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void backupCurrentData(UUID uuid, int vaultId) {
+        if (!com.artillexstudios.axvaults.AxVaults.CONFIG.getBoolean("vault-rollback.enabled", true)) return;
+        final String selectSql = "SELECT storage, icon FROM axvaults_data WHERE uuid = ? AND id = ?;";
+        try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
+            stmt.setString(1, uuid.toString());
+            stmt.setInt(2, vaultId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return;
+                byte[] storage = rs.getBytes(1);
+                String icon = rs.getString(2);
+                if (storage == null) return;
+                final String insertSql = "INSERT INTO axvaults_backups(vault_id, uuid, storage, icon, backed_up_at) VALUES (?, ?, ?, ?, ?);";
+                try (PreparedStatement ins = conn.prepareStatement(insertSql)) {
+                    ins.setInt(1, vaultId);
+                    ins.setString(2, uuid.toString());
+                    ins.setBytes(3, storage);
+                    ins.setString(4, icon);
+                    ins.setLong(5, System.currentTimeMillis());
+                    ins.executeUpdate();
+                }
+                // prune: keep only the N most recent backups
+                int max = com.artillexstudios.axvaults.AxVaults.CONFIG.getInt("vault-rollback.max-backups-per-vault", 5);
+                final String listSql = "SELECT id FROM axvaults_backups WHERE uuid = ? AND vault_id = ? ORDER BY backed_up_at DESC;";
+                try (PreparedStatement listStmt = conn.prepareStatement(listSql)) {
+                    listStmt.setString(1, uuid.toString());
+                    listStmt.setInt(2, vaultId);
+                    try (ResultSet listRs = listStmt.executeQuery()) {
+                        List<Long> ids = new ArrayList<>();
+                        while (listRs.next()) ids.add(listRs.getLong(1));
+                        for (int i = max; i < ids.size(); i++) {
+                            try (PreparedStatement del = conn.prepareStatement("DELETE FROM axvaults_backups WHERE id = ?;")) {
+                                del.setLong(1, ids.get(i));
+                                del.executeUpdate();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
     public void saveVault(Vault vault, Object result) {
         // delete empty vaults
         if (result instanceof Boolean bool && bool) {
+            backupCurrentData(vault.getUUID(), vault.getId());
             String sql = "DELETE FROM axvaults_data WHERE uuid = ? AND id = ?;";
             try (PreparedStatement stmt = conn.prepareStatement(sql)){
                 stmt.setString(1, vault.getUUID().toString());
@@ -100,6 +163,7 @@ public class H2 implements Database {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
+                    backupCurrentData(vault.getUUID(), vault.getId());
                     sql = "UPDATE axvaults_data SET storage = ?, icon = ? WHERE uuid = ? AND id = ?;";
                     try (PreparedStatement stmt2 = conn.prepareStatement(sql)) {
                         stmt2.setBytes(1, bytes);
@@ -208,6 +272,7 @@ public class H2 implements Database {
 
     @Override
     public void deleteVault(@NotNull UUID uuid, int num) {
+        backupCurrentData(uuid, num);
         final String sql = "DELETE FROM axvaults_data WHERE uuid = ? AND id = ?;";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, uuid.toString());
@@ -215,6 +280,54 @@ public class H2 implements Database {
             stmt.executeUpdate();
         } catch (SQLException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public List<VaultBackup> getBackups(UUID uuid, int vaultId) {
+        List<VaultBackup> result = new ArrayList<>();
+        final String sql = "SELECT id, vault_id, uuid, storage, icon, backed_up_at FROM axvaults_backups WHERE uuid = ? AND vault_id = ? ORDER BY backed_up_at DESC;";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid.toString());
+            stmt.setInt(2, vaultId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new VaultBackup(
+                        rs.getLong(1), rs.getInt(2), UUID.fromString(rs.getString(3)),
+                        rs.getBytes(4), rs.getString(5), rs.getLong(6)
+                    ));
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return result;
+    }
+
+    @Override
+    public boolean restoreBackup(VaultBackup backup) {
+        final String checkSql = "SELECT COUNT(*) FROM axvaults_data WHERE uuid = ? AND id = ?;";
+        try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
+            stmt.setString(1, backup.uuid.toString());
+            stmt.setInt(2, backup.vaultId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                rs.next();
+                boolean exists = rs.getInt(1) > 0;
+                String sql = exists
+                    ? "UPDATE axvaults_data SET storage = ?, icon = ? WHERE uuid = ? AND id = ?;"
+                    : "INSERT INTO axvaults_data(storage, icon, uuid, id) VALUES (?, ?, ?, ?);";
+                try (PreparedStatement upsert = conn.prepareStatement(sql)) {
+                    upsert.setBytes(1, backup.storage);
+                    upsert.setString(2, backup.icon);
+                    upsert.setString(3, backup.uuid.toString());
+                    upsert.setInt(4, backup.vaultId);
+                    upsert.executeUpdate();
+                }
+            }
+            return true;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return false;
         }
     }
 

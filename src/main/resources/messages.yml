@@ -85,6 +85,14 @@ banned-item: "&#FF0000You can't put this item into vaults!"
 blacklisted-items-in-vault: "&#FFAA00This vault contains &c%count% &#FFAA00blacklisted item(s). You may take them out but cannot put them back."
 vault-item-limit: "&#FF0000You've reached the limit for this item type in this vault!"
 
+rollback:
+  success: "&#00FF00Restored vault &f#%num% &#00FF00of &f%player% &#00FF00to backup &f#%index%&#00FF00!"
+  not-found: "&#FF0000No backup found for vault &f#%num% &#FF0000of &f%player%&#FF0000."
+  error: "&#FF0000Failed to restore backup — check console for details."
+  restored-online: "&#FFAA00An admin has restored your vault &f#%num%&#FFAA00."
+  list-header: "&#FFAA00Backups for &f%player%&#FFAA00's vault &f#%num%&#FFAA00:"
+  list-entry: "  &f#%index% &7— &f%date%"
+
 view:
   open: "&#55FF00%player%&f's &#55FF00#%num% &fvault opened!"
   info: "&fVaults of &#55FF00%player%&f: &#AAFFAA%vaults%"

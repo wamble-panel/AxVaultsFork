@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface Database {
@@ -25,6 +26,9 @@ public interface Database {
     void removeVault(@NotNull Location location);
 
     void deleteVault(@NotNull UUID uuid, int num);
+
+    List<VaultBackup> getBackups(UUID uuid, int vaultId);
+    boolean restoreBackup(VaultBackup backup);
 
     void load();
 

@@ -6,6 +6,7 @@ import com.artillexstudios.axvaults.commands.subcommands.Delete;
 import com.artillexstudios.axvaults.commands.subcommands.ForceOpen;
 import com.artillexstudios.axvaults.commands.subcommands.Help;
 import com.artillexstudios.axvaults.commands.subcommands.Reload;
+import com.artillexstudios.axvaults.commands.subcommands.Rollback;
 import com.artillexstudios.axvaults.commands.subcommands.Save;
 import com.artillexstudios.axvaults.commands.subcommands.Set;
 import com.artillexstudios.axvaults.commands.subcommands.Stats;
@@ -52,6 +53,18 @@ public class AdminCommand implements OrphanCommand {
     @Subcommand("delete")
     public void delete(CommandSender sender, OfflinePlayer player, int number) {
         Delete.INSTANCE.execute(sender, player, number);
+    }
+
+    @CommandPermission("axvaults.admin.rollback")
+    @Subcommand("rollback")
+    public void rollback(CommandSender sender, OfflinePlayer player, int vaultId, @Optional @Range(min = 1) Integer index) {
+        Rollback.INSTANCE.execute(sender, player, vaultId, index != null ? index : 1);
+    }
+
+    @CommandPermission("axvaults.admin.rollback")
+    @Subcommand("rollback list")
+    public void rollbackList(CommandSender sender, OfflinePlayer player, int vaultId) {
+        Rollback.INSTANCE.executeList(sender, player, vaultId);
     }
 
     @CommandPermission("axvaults.admin.set")

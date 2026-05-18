@@ -1,0 +1,103 @@
+package com.artillexstudios.axvaults.commands.subcommands;
+
+import com.artillexstudios.axapi.serializers.Serializers;
+import com.artillexstudios.axvaults.AxVaults;
+import com.artillexstudios.axvaults.database.VaultBackup;
+import com.artillexstudios.axvaults.utils.SerializationUtils;
+import com.artillexstudios.axvaults.utils.ThreadUtils;
+import com.artillexstudios.axvaults.vaults.Vault;
+import com.artillexstudios.axvaults.vaults.VaultManager;
+import com.artillexstudios.axvaults.vaults.VaultPlayer;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+
+import java.io.ByteArrayInputStream;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.artillexstudios.axvaults.AxVaults.MESSAGEUTILS;
+
+public enum Rollback {
+    INSTANCE;
+
+    private static final DateTimeFormatter DATE_FMT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+
+    public void execute(CommandSender sender, OfflinePlayer player, int vaultId, int index) {
+        Map<String, String> rep = replacements(player, vaultId);
+        rep.put("%index%", String.valueOf(index));
+
+        AxVaults.getThreadedQueue().submit(() -> {
+            List<VaultBackup> backups = AxVaults.getDatabase().getBackups(player.getUniqueId(), vaultId);
+            if (backups.isEmpty() || index < 1 || index > backups.size()) {
+                ThreadUtils.runSync(() -> MESSAGEUTILS.sendLang(sender, "rollback.not-found", rep));
+                return;
+            }
+            VaultBackup backup = backups.get(index - 1);
+            if (!AxVaults.getDatabase().restoreBackup(backup)) {
+                ThreadUtils.runSync(() -> MESSAGEUTILS.sendLang(sender, "rollback.error", rep));
+                return;
+            }
+            ThreadUtils.runSync(() -> {
+                // Update in-memory vault if loaded
+                VaultPlayer vp = VaultManager.getPlayerOrNull(Bukkit.getOfflinePlayer(player.getUniqueId()));
+                if (vp != null) {
+                    Vault vault = vp.getVaultMap().get(vaultId);
+                    if (vault != null) {
+                        ItemStack[] items = deserialize(backup.storage);
+                        if (items != null) {
+                            vault.setContents(items);
+                            vault.hasChanged().set(false);
+                        }
+                    }
+                }
+                MESSAGEUTILS.sendLang(sender, "rollback.success", rep);
+                Player online = Bukkit.getPlayer(player.getUniqueId());
+                if (online != null) MESSAGEUTILS.sendLang(online, "rollback.restored-online", rep);
+            });
+        });
+    }
+
+    public void executeList(CommandSender sender, OfflinePlayer player, int vaultId) {
+        Map<String, String> rep = replacements(player, vaultId);
+        AxVaults.getThreadedQueue().submit(() -> {
+            List<VaultBackup> backups = AxVaults.getDatabase().getBackups(player.getUniqueId(), vaultId);
+            ThreadUtils.runSync(() -> {
+                if (backups.isEmpty()) {
+                    MESSAGEUTILS.sendLang(sender, "rollback.not-found", rep);
+                    return;
+                }
+                MESSAGEUTILS.sendLang(sender, "rollback.list-header", rep);
+                for (int i = 0; i < backups.size(); i++) {
+                    Map<String, String> entryRep = new HashMap<>(rep);
+                    entryRep.put("%index%", String.valueOf(i + 1));
+                    entryRep.put("%date%", DATE_FMT.format(Instant.ofEpochMilli(backups.get(i).backedUpAt)));
+                    MESSAGEUTILS.sendLang(sender, "rollback.list-entry", entryRep);
+                }
+            });
+        });
+    }
+
+    private ItemStack[] deserialize(byte[] bytes) {
+        try {
+            return Serializers.ITEM_ARRAY.deserialize(bytes);
+        } catch (Exception e) {
+            return SerializationUtils.invFromBits(new ByteArrayInputStream(bytes));
+        }
+    }
+
+    private Map<String, String> replacements(OfflinePlayer player, int vaultId) {
+        Map<String, String> map = new HashMap<>();
+        map.put("%player%", player.getName() != null ? player.getName() : player.getUniqueId().toString());
+        map.put("%num%", String.valueOf(vaultId));
+        return map;
+    }
+}
