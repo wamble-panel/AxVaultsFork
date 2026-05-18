@@ -4,7 +4,6 @@ import com.artillexstudios.axapi.utils.ContainerUtils;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.hooks.HookManager;
-import com.artillexstudios.axvaults.utils.BlacklistUtils;
 import com.artillexstudios.axvaults.utils.SoundUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -135,9 +134,10 @@ public class Vault implements InventoryHolder {
     }
 
     private void notifyIfBlacklisted(@NotNull Player player) {
+        VaultRules rules = new VaultRules(id);
         int count = 0;
         for (ItemStack content : storage.getContents()) {
-            if (BlacklistUtils.isBlacklisted(content)) count++;
+            if (rules.isBlacklisted(content)) count++;
         }
         if (count > 0) {
             MESSAGEUTILS.sendLang(player, "blacklisted-items-in-vault", Map.of("%count%", String.valueOf(count)));

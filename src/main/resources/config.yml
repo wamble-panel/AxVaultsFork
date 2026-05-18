@@ -225,6 +225,99 @@ blacklist-items:
   - material: "STRUCTURE_BLOCK"
   - material: "JIGSAW"
 
+# Per-vault rule overrides.
+# bypass-global-blacklist: if true, the vault ignores the global blacklist-items list entirely
+#   and only enforces the vault's own blacklist-items below.
+# blacklist-items: same format as the global blacklist-items — added on top of (or replacing) the global list.
+# item-limits: restrict how many of a given item type can be stored.
+#   match:        wildcard pattern for the item material (e.g. "*_SWORD", "MACE")
+#   exempt:       optional wildcard — items matching this are NOT counted/limited (e.g. "LEATHER_*")
+#   max:          maximum number allowed in the vault
+#   per-material: true (default) = limit is per exact material (e.g. max 2 DIAMOND_SWORDs separately from NETHERITE_SWORDs)
+#                 false          = limit applies to ALL items matching the pattern combined
+vault-overrides:
+  6:
+    bypass-global-blacklist: true
+    blacklist-items:
+      # --- Absolute bans in vault 6 ---
+      - material: "BEACON"
+      - material: "WITHER_SKELETON_SKULL"
+      - material: "SHULKER_SHELL"
+      # shulker boxes (plain + all 16 colours)
+      - material: "SHULKER_BOX"
+      - material: "*_SHULKER_BOX"
+      # bundles
+      - material: "BUNDLE"
+      - material: "*_BUNDLE"
+      # --- Ores, raw materials, ingots, scraps ---
+      - material: "*_ORE"
+      - material: "ANCIENT_DEBRIS"
+      - material: "NETHERITE_SCRAP"
+      - material: "NETHERITE_INGOT"
+      - material: "IRON_INGOT"
+      - material: "GOLD_INGOT"
+      - material: "COPPER_INGOT"
+      - material: "RAW_IRON"
+      - material: "RAW_GOLD"
+      - material: "RAW_COPPER"
+      - material: "RAW_IRON_BLOCK"
+      - material: "RAW_GOLD_BLOCK"
+      - material: "RAW_COPPER_BLOCK"
+      - material: "DIAMOND"
+      - material: "EMERALD"
+      - material: "LAPIS_LAZULI"
+      - material: "COAL"
+      - material: "QUARTZ"
+      - material: "NETHERITE_BLOCK"
+      - material: "DIAMOND_BLOCK"
+      - material: "IRON_BLOCK"
+      - material: "GOLD_BLOCK"
+      - material: "EMERALD_BLOCK"
+      - material: "LAPIS_BLOCK"
+      - material: "COAL_BLOCK"
+      - material: "COPPER_BLOCK"
+      - material: "EXPOSED_COPPER"
+      - material: "WEATHERED_COPPER"
+      - material: "OXIDIZED_COPPER"
+    item-limits:
+      # Armor — max 2 of each specific piece (e.g. 2 diamond helmets), leather exempt
+      - match: "*_HELMET"
+        exempt: "LEATHER_HELMET"
+        max: 2
+        per-material: true
+      - match: "*_CHESTPLATE"
+        exempt: "LEATHER_CHESTPLATE"
+        max: 2
+        per-material: true
+      - match: "*_LEGGINGS"
+        exempt: "LEATHER_LEGGINGS"
+        max: 2
+        per-material: true
+      - match: "*_BOOTS"
+        exempt: "LEATHER_BOOTS"
+        max: 2
+        per-material: true
+      # Tools — max 2 of each specific type (e.g. 2 diamond swords, 2 netherite pickaxes)
+      - match: "*_SWORD"
+        max: 2
+        per-material: true
+      - match: "*_PICKAXE"
+        max: 2
+        per-material: true
+      - match: "*_AXE"
+        max: 2
+        per-material: true
+      - match: "*_SHOVEL"
+        max: 2
+        per-material: true
+      - match: "*_HOE"
+        max: 2
+        per-material: true
+      # Mace — max 2 total
+      - match: "MACE"
+        max: 2
+        per-material: false
+
 # you must define at least 1
 # requires a restart to update
 player-command-aliases:
