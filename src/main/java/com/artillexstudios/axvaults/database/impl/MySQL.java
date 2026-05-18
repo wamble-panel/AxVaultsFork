@@ -3,6 +3,7 @@ package com.artillexstudios.axvaults.database.impl;
 import com.artillexstudios.axapi.serializers.Serializers;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.database.Database;
+import com.artillexstudios.axvaults.database.VaultBackup;
 import com.artillexstudios.axvaults.placed.PlacedVaults;
 import com.artillexstudios.axvaults.utils.ThreadUtils;
 import com.artillexstudios.axvaults.vaults.Vault;
@@ -23,7 +24,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import static com.artillexstudios.axvaults.AxVaults.CONFIG;
@@ -338,6 +341,16 @@ public class MySQL implements Database {
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+    }
+
+    @Override
+    public List<VaultBackup> getBackups(UUID uuid, int vaultId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public boolean restoreBackup(VaultBackup backup) {
+        return false;
     }
 
     @Override
