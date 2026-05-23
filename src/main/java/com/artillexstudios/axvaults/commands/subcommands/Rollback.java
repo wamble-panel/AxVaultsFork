@@ -5,6 +5,7 @@ import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.database.VaultBackup;
 import com.artillexstudios.axvaults.utils.SerializationUtils;
 import com.artillexstudios.axvaults.utils.ThreadUtils;
+import com.artillexstudios.axvaults.vaults.RollbackView;
 import com.artillexstudios.axvaults.vaults.Vault;
 import com.artillexstudios.axvaults.vaults.VaultManager;
 import com.artillexstudios.axvaults.vaults.VaultPlayer;
@@ -62,6 +63,35 @@ public enum Rollback {
                 MESSAGEUTILS.sendLang(sender, "rollback.success", rep);
                 Player online = Bukkit.getPlayer(player.getUniqueId());
                 if (online != null) MESSAGEUTILS.sendLang(online, "rollback.restored-online", rep);
+            });
+        });
+    }
+
+    public void executeView(CommandSender sender, OfflinePlayer player, int vaultId, int index) {
+        Map<String, String> rep = replacements(player, vaultId);
+        rep.put("%index%", String.valueOf(index));
+
+        if (!(sender instanceof Player adminPlayer)) {
+            MESSAGEUTILS.sendLang(sender, "commands.player-only", rep);
+            return;
+        }
+
+        AxVaults.getThreadedQueue().submit(() -> {
+            List<VaultBackup> backups = AxVaults.getDatabase().getBackups(player.getUniqueId(), vaultId);
+            if (backups.isEmpty() || index < 1 || index > backups.size()) {
+                ThreadUtils.runSync(() -> MESSAGEUTILS.sendLang(sender, "rollback.not-found", rep));
+                return;
+            }
+            VaultBackup backup = backups.get(index - 1);
+            ItemStack[] items = deserialize(backup.storage);
+            if (items == null) {
+                ThreadUtils.runSync(() -> MESSAGEUTILS.sendLang(sender, "rollback.error", rep));
+                return;
+            }
+            ThreadUtils.runSync(() -> {
+                String title = "Backup #" + index + " of " + (player.getName() != null ? player.getName() : "?") + " — Vault #" + vaultId;
+                RollbackView view = new RollbackView(player.getUniqueId(), vaultId, index, items, title);
+                adminPlayer.openInventory(view.getInventory());
             });
         });
     }

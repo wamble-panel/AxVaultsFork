@@ -67,6 +67,12 @@ public class AdminCommand implements OrphanCommand {
         Rollback.INSTANCE.executeList(sender, player, vaultId);
     }
 
+    @CommandPermission("axvaults.admin.rollback")
+    @Subcommand("rollback view")
+    public void rollbackView(CommandSender sender, OfflinePlayer player, int vaultId, @Optional @Range(min = 1) Integer index) {
+        Rollback.INSTANCE.executeView(sender, player, vaultId, index != null ? index : 1);
+    }
+
     @CommandPermission("axvaults.admin.set")
     @Subcommand("set")
     public void set(Player sender, @Optional Integer number) {

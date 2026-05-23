@@ -3,6 +3,7 @@ package com.artillexstudios.axvaults.listeners;
 import com.artillexstudios.axapi.utils.PaperUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.utils.SoundUtils;
+import com.artillexstudios.axvaults.utils.VaultUtils;
 import com.artillexstudios.axvaults.vaults.Vault;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,5 +26,8 @@ public class InventoryCloseListener implements Listener {
             MESSAGEUTILS.sendLang(event.getPlayer(), "vault.closed", Map.of("%num%", "" + vault.getId()));
             SoundUtils.playSound((Player) event.getPlayer(), MESSAGES.getString("sounds.close"));
         });
+
+        // persist immediately so a crash before the next auto-save can't lose items
+        VaultUtils.save(vault);
     }
 }
