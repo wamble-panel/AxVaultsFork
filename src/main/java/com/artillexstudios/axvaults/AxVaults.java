@@ -113,6 +113,7 @@ public final class AxVaults extends AxPlugin {
         getServer().getPluginManager().registerEvents(new BlockBreakListener(), this);
         getServer().getPluginManager().registerEvents(new InventoryCloseListener(), this);
         getServer().getPluginManager().registerEvents(new InventoryClickListener(), this);
+        getServer().getPluginManager().registerEvents(new com.artillexstudios.axvaults.listeners.RollbackListViewListener(), this);
 
         CommandManager.load();
 

@@ -1,10 +1,12 @@
 package com.artillexstudios.axvaults.commands.subcommands;
 
 import com.artillexstudios.axapi.serializers.Serializers;
+import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.AxVaults;
 import com.artillexstudios.axvaults.database.VaultBackup;
 import com.artillexstudios.axvaults.utils.SerializationUtils;
 import com.artillexstudios.axvaults.utils.ThreadUtils;
+import com.artillexstudios.axvaults.vaults.RollbackListView;
 import com.artillexstudios.axvaults.vaults.RollbackView;
 import com.artillexstudios.axvaults.vaults.Vault;
 import com.artillexstudios.axvaults.vaults.VaultManager;
@@ -20,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +101,28 @@ public enum Rollback {
 
     public void executeList(CommandSender sender, OfflinePlayer player, int vaultId) {
         Map<String, String> rep = replacements(player, vaultId);
+
+        if (!(sender instanceof Player adminPlayer)) {
+            // fallback: text list for console
+            AxVaults.getThreadedQueue().submit(() -> {
+                List<VaultBackup> backups = AxVaults.getDatabase().getBackups(player.getUniqueId(), vaultId);
+                ThreadUtils.runSync(() -> {
+                    if (backups.isEmpty()) {
+                        MESSAGEUTILS.sendLang(sender, "rollback.not-found", rep);
+                        return;
+                    }
+                    MESSAGEUTILS.sendLang(sender, "rollback.list-header", rep);
+                    for (int i = 0; i < backups.size(); i++) {
+                        Map<String, String> entryRep = new HashMap<>(rep);
+                        entryRep.put("%index%", String.valueOf(i + 1));
+                        entryRep.put("%date%", DATE_FMT.format(Instant.ofEpochMilli(backups.get(i).backedUpAt)));
+                        MESSAGEUTILS.sendLang(sender, "rollback.list-entry", entryRep);
+                    }
+                });
+            });
+            return;
+        }
+
         AxVaults.getThreadedQueue().submit(() -> {
             List<VaultBackup> backups = AxVaults.getDatabase().getBackups(player.getUniqueId(), vaultId);
             ThreadUtils.runSync(() -> {
@@ -105,15 +130,41 @@ public enum Rollback {
                     MESSAGEUTILS.sendLang(sender, "rollback.not-found", rep);
                     return;
                 }
-                MESSAGEUTILS.sendLang(sender, "rollback.list-header", rep);
-                for (int i = 0; i < backups.size(); i++) {
-                    Map<String, String> entryRep = new HashMap<>(rep);
-                    entryRep.put("%index%", String.valueOf(i + 1));
-                    entryRep.put("%date%", DATE_FMT.format(Instant.ofEpochMilli(backups.get(i).backedUpAt)));
-                    MESSAGEUTILS.sendLang(sender, "rollback.list-entry", entryRep);
+
+                String playerName = player.getName() != null ? player.getName() : "?";
+                String title = StringUtils.formatToString("&8" + playerName + " — Vault #" + vaultId + " Backups");
+                RollbackListView view = new RollbackListView(player.getUniqueId(), vaultId, backups, title);
+
+                for (int i = 0; i < backups.size() && i < view.getInventory().getSize(); i++) {
+                    VaultBackup b = backups.get(i);
+                    int itemCount = countItems(b.storage);
+                    ItemStack icon = new ItemStack(i == 0 ? Material.CLOCK : Material.PAPER);
+                    final int idx = i + 1;
+                    final boolean newest = i == 0;
+                    icon.editMeta(meta -> {
+                        meta.setDisplayName(StringUtils.formatToString("&#55ff00&lBackup #" + idx + (newest ? " &7(newest)" : "")));
+                        List<String> lore = new ArrayList<>();
+                        lore.add(StringUtils.formatToString("&7Date: &f" + DATE_FMT.format(Instant.ofEpochMilli(b.backedUpAt))));
+                        lore.add(StringUtils.formatToString("&7Items: &f" + itemCount));
+                        lore.add(StringUtils.formatToString(" "));
+                        lore.add(StringUtils.formatToString("&#55ff00&lLeft-Click &7to view contents"));
+                        lore.add(StringUtils.formatToString("&#FFAA00&lShift-Click &7to restore"));
+                        meta.setLore(lore);
+                    });
+                    view.getInventory().setItem(i, icon);
                 }
+
+                adminPlayer.openInventory(view.getInventory());
             });
         });
+    }
+
+    private int countItems(byte[] bytes) {
+        ItemStack[] items = deserialize(bytes);
+        if (items == null) return 0;
+        int n = 0;
+        for (ItemStack it : items) if (it != null && it.getType() != Material.AIR) n++;
+        return n;
     }
 
     private ItemStack[] deserialize(byte[] bytes) {
