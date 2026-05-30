@@ -65,6 +65,9 @@ delete-empty-vaults: true
 # we suggest creating a spark report and sending it to the developers before using this
 async-item-serializer: false
 
+# Set to false to completely disable the blacklist — all items will be allowed in all vaults.
+blacklist-enabled: true
+
 # If true, any item that has lore lines set (e.g. CrazyVouchers, event items) bypasses the blacklist entirely.
 blacklist-exempt-if-has-lore: true
 

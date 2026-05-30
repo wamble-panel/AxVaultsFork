@@ -27,6 +27,7 @@ public class BlacklistUtils {
     private static final int MAX_CONTAINER_DEPTH = 3;
 
     // cached at reload — avoids reading config on every item check
+    private static boolean enabled = true;
     private static boolean exemptIfHasLore = false;
     private static boolean checkContainers = true;
     private static List<NamespacedKey> pdcExemptKeys = new ArrayList<>();
@@ -34,6 +35,7 @@ public class BlacklistUtils {
     private static Set<Material> legacyMaterials = EnumSet.noneOf(Material.class);
 
     public static void reload() {
+        enabled = CONFIG.getBoolean("blacklist-enabled", true);
         exemptIfHasLore = CONFIG.getBoolean("blacklist-exempt-if-has-lore", false);
         checkContainers = CONFIG.getBoolean("blacklist-check-containers", true);
 
@@ -73,6 +75,7 @@ public class BlacklistUtils {
     }
 
     static boolean isBlacklisted(@Nullable ItemStack it, int depth) {
+        if (!enabled) return false;
         if (it == null || it.getType() == Material.AIR) return false;
         if (depth > MAX_CONTAINER_DEPTH) return false;
 
