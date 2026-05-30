@@ -23,7 +23,7 @@ public class BlacklistListener implements Listener {
         if (!(PaperUtils.getHolder(event.getInventory(), false) instanceof Vault vault)) return;
         if (event.getClickedInventory() == null) return;
 
-        VaultRules rules = new VaultRules(vault.getId());
+        VaultRules rules = VaultRules.of(vault.getId());
         Inventory vaultInv = event.getView().getTopInventory();
         boolean clickedVault = event.getClickedInventory().equals(vaultInv);
 

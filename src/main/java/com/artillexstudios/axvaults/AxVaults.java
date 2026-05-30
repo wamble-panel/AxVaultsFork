@@ -28,6 +28,7 @@ import com.artillexstudios.axvaults.listeners.InventoryCloseListener;
 import com.artillexstudios.axvaults.listeners.PlayerInteractListener;
 import com.artillexstudios.axvaults.listeners.PlayerListeners;
 import com.artillexstudios.axvaults.schedulers.AutoSaveScheduler;
+import com.artillexstudios.axvaults.utils.BlacklistUtils;
 import com.artillexstudios.axvaults.utils.DebugUtils;
 import com.artillexstudios.axvaults.utils.UpdateNotifier;
 import com.artillexstudios.axvaults.utils.VaultUtils;
@@ -94,6 +95,7 @@ public final class AxVaults extends AxPlugin {
         threadedQueue = new ThreadedQueue<>("AxVaults-Datastore-thread");
 
         VaultUtils.reload();
+        BlacklistUtils.reload();
         HookManager.setupHooks();
         DebugUtils.init(CONFIG);
 

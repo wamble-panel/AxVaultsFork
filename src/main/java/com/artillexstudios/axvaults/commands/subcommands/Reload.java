@@ -2,10 +2,12 @@ package com.artillexstudios.axvaults.commands.subcommands;
 
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axvaults.listeners.PlayerInteractListener;
+import com.artillexstudios.axvaults.utils.BlacklistUtils;
 import com.artillexstudios.axvaults.utils.DebugUtils;
 import com.artillexstudios.axvaults.utils.VaultUtils;
 import com.artillexstudios.axvaults.vaults.Vault;
 import com.artillexstudios.axvaults.vaults.VaultManager;
+import com.artillexstudios.axvaults.vaults.VaultRules;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
@@ -33,6 +35,8 @@ public enum Reload {
         Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#55FF00╠ &#00FF00Reloaded &fmessages.yml&#00FF00!"));
 
         VaultUtils.reload();
+        BlacklistUtils.reload();
+        VaultRules.invalidateCache();
         DebugUtils.reload();
         PlayerInteractListener.reload();
         VaultManager.getVaults().forEach(Vault::reload);

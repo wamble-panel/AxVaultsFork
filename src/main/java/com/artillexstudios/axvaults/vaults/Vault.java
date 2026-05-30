@@ -134,7 +134,7 @@ public class Vault implements InventoryHolder {
     }
 
     private void notifyIfBlacklisted(@NotNull Player player) {
-        VaultRules rules = new VaultRules(id);
+        VaultRules rules = VaultRules.of(id);
         int count = 0;
         for (ItemStack content : storage.getContents()) {
             if (rules.isBlacklisted(content)) count++;
