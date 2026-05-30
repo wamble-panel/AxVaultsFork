@@ -139,10 +139,9 @@ public enum Rollback {
                     VaultBackup b = backups.get(i);
                     int itemCount = countItems(b.storage);
                     ItemStack icon = new ItemStack(i == 0 ? Material.CLOCK : Material.PAPER);
-                    final int idx = i + 1;
-                    final boolean newest = i == 0;
-                    icon.editMeta(meta -> {
-                        meta.setDisplayName(StringUtils.formatToString("&#55ff00&lBackup #" + idx + (newest ? " &7(newest)" : "")));
+                    org.bukkit.inventory.meta.ItemMeta meta = icon.getItemMeta();
+                    if (meta != null) {
+                        meta.setDisplayName(StringUtils.formatToString("&#55ff00&lBackup #" + (i + 1) + (i == 0 ? " &7(newest)" : "")));
                         List<String> lore = new ArrayList<>();
                         lore.add(StringUtils.formatToString("&7Date: &f" + DATE_FMT.format(Instant.ofEpochMilli(b.backedUpAt))));
                         lore.add(StringUtils.formatToString("&7Items: &f" + itemCount));
@@ -150,7 +149,8 @@ public enum Rollback {
                         lore.add(StringUtils.formatToString("&#55ff00&lLeft-Click &7to view contents"));
                         lore.add(StringUtils.formatToString("&#FFAA00&lShift-Click &7to restore"));
                         meta.setLore(lore);
-                    });
+                        icon.setItemMeta(meta);
+                    }
                     view.getInventory().setItem(i, icon);
                 }
 
