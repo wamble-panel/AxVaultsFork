@@ -203,15 +203,23 @@ public class H2 implements Database {
                     try {
                         tempItems = Serializers.ITEM_ARRAY.deserialize(bytes);
                     } catch (Exception ex) {
-                        // fallback: data was saved with BukkitObjectOutputStream (pre-2.0.0 format)
+                        // fallback 1: legacy BukkitObjectOutputStream (pre-2.0.0) format
                         tempItems = SerializationUtils.invFromBits(new ByteArrayInputStream(bytes));
+                        if (tempItems != null) {
+                            legacy = true;
+                            Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FFAA00[AxVaults] Migrated legacy vault #%s of %s to new format.".formatted(id, vaultPlayer.getUUID().toString())));
+                        } else {
+                            // fallback 2: intermediate axapi format (4-byte count + 2-byte short + raw item bytes)
+                            tempItems = SerializationUtils.tryManualDeserialize(bytes);
+                            if (tempItems != null) {
+                                Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FFAA00[AxVaults] Recovered vault #%s of %s via manual fallback — verify contents in-game.".formatted(id, vaultPlayer.getUUID().toString())));
+                            }
+                        }
                         if (tempItems == null) {
                             ex.printStackTrace();
                             Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FF0000[AxVaults] Failed to load vault #%s of %s!".formatted(id, vaultPlayer.getUUID().toString())));
                             continue;
                         }
-                        legacy = true;
-                        Bukkit.getConsoleSender().sendMessage(StringUtils.formatToString("&#FFAA00[AxVaults] Migrated legacy vault #%s of %s to new format.".formatted(id, vaultPlayer.getUUID().toString())));
                     }
 //                    if (VaultUtils.isDeleteEmptyVaults() && items.length == 0) continue;
                     final ItemStack[] items = tempItems;
