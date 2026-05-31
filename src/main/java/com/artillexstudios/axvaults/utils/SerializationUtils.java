@@ -1,6 +1,6 @@
 package com.artillexstudios.axvaults.utils;
 
-import org.bukkit.Bukkit;
+import com.artillexstudios.axapi.items.WrappedItemStack;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectInputStream;
@@ -11,7 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
 import java.util.Base64;
-import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class SerializationUtils {
 
@@ -27,9 +27,8 @@ public class SerializationUtils {
     /**
      * Fallback for the intermediate axapi format: outer array is
      * (4-byte int count) + per-item (2-byte unsigned short size + size bytes).
-     * Each item's bytes are tried as GZIP-compressed NBT, then as raw NBT,
-     * then as Base64-encoded variants of those. Items that cannot be recovered
-     * become AIR — the vault loads rather than failing entirely.
+     * The item bytes are tried with several strategies so the vault loads
+     * rather than failing entirely. Unrecoverable individual items become AIR.
      */
     @Nullable
     public static ItemStack[] tryManualDeserialize(byte[] bytes) {
@@ -56,44 +55,34 @@ public class SerializationUtils {
     }
 
     @Nullable
-    @SuppressWarnings("deprecation")
     private static ItemStack tryDeserializeItem(byte[] itemBytes) {
-        // Try 1: raw bytes directly (expected by Bukkit.getUnsafe().deserializeItem)
+        // Try 1: GZIP-wrap the raw bytes so WrappedItemStack (which expects GZIP) can read them.
+        // This handles the intermediate axapi format where items were stored as uncompressed NBT.
         try {
-            return Bukkit.getUnsafe().deserializeItem(itemBytes);
+            return WrappedItemStack.wrap(gzip(itemBytes)).toBukkit();
         } catch (Exception ignored) {}
 
-        // Try 2: GZIP-decompress then deserialize
-        try {
-            byte[] decompressed = gunzip(itemBytes);
-            if (decompressed != null) {
-                return Bukkit.getUnsafe().deserializeItem(decompressed);
-            }
-        } catch (Exception ignored) {}
-
-        // Try 3: treat bytes as Base64 text → raw
+        // Try 2: base64 decode → GZIP-wrap (for base64-encoded uncompressed NBT)
         try {
             byte[] decoded = Base64.getDecoder().decode(itemBytes);
-            return Bukkit.getUnsafe().deserializeItem(decoded);
+            return WrappedItemStack.wrap(gzip(decoded)).toBukkit();
         } catch (Exception ignored) {}
 
-        // Try 4: Base64 text → GZIP decompress
+        // Try 3: base64 decode, already GZIP (for base64-encoded GZIP NBT)
         try {
             byte[] decoded = Base64.getDecoder().decode(itemBytes);
-            byte[] decompressed = gunzip(decoded);
-            if (decompressed != null) {
-                return Bukkit.getUnsafe().deserializeItem(decompressed);
-            }
+            return WrappedItemStack.wrap(decoded).toBukkit();
         } catch (Exception ignored) {}
 
         return null;
     }
 
     @Nullable
-    private static byte[] gunzip(byte[] bytes) {
-        try (GZIPInputStream gz = new GZIPInputStream(new ByteArrayInputStream(bytes));
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            gz.transferTo(baos);
+    private static byte[] gzip(byte[] bytes) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
+            gzos.write(bytes);
+            gzos.finish();
             return baos.toByteArray();
         } catch (Exception e) {
             return null;
